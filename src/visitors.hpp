@@ -597,6 +597,7 @@ class QuaternionVisitor:  public py::def_visitor<QuaternionVisitor<QuaternionT> 
 		.def("__init__",py::make_constructor(&QuaternionVisitor::fromAxisAngle,py::default_call_policies(),(py::arg("axis"),py::arg("angle"))))
 		.def("__init__",py::make_constructor(&QuaternionVisitor::fromAngleAxis,py::default_call_policies(),(py::arg("angle"),py::arg("axis"))))
 		.def("__init__",py::make_constructor(&QuaternionVisitor::fromTwoVectors,py::default_call_policies(),(py::arg("u"),py::arg("v"))))
+		.def("__init__",py::make_constructor(&QuaternionVisitor::fromRPY,py::default_call_policies(),(py::arg("roll"),py::arg("pitch"),py::arg("yaw"))))
 		.def(py::init<Scalar,Scalar,Scalar,Scalar>((py::arg("w"),py::arg("x"),py::arg("y"),py::arg("z")),"Initialize from coefficients.\n\n.. note:: The order of coefficients is *w*, *x*, *y*, *z*. The [] operator numbers them differently, 0...4 for *x* *y* *z* *w*!"))
 		.def(py::init<CompatMat3>((py::arg("rotMatrix")))) //,"Initialize from given rotation matrix.")
 		.def(py::init<QuaternionT>((py::arg("other"))))
@@ -611,6 +612,7 @@ class QuaternionVisitor:  public py::def_visitor<QuaternionVisitor<QuaternionT> 
 		.def("toAngleAxis",&QuaternionVisitor::toAngleAxis)
 		.def("toRotationMatrix",&QuaternionT::toRotationMatrix)
 		.def("toRotationVector",&QuaternionVisitor::toRotationVector)
+		.def("toRPY",&QuaternionVisitor::toRPY)
 		.def("Rotate",&QuaternionVisitor::Rotate,((py::arg("v"))))
 		.def("inverse",&QuaternionT::inverse)
 		.def("norm",&QuaternionT::norm)
@@ -635,6 +637,13 @@ class QuaternionVisitor:  public py::def_visitor<QuaternionVisitor<QuaternionT> 
 	static QuaternionT* fromAxisAngle(const CompatVec3& axis, const Scalar& angle){ QuaternionT* ret=new QuaternionT(AngleAxisT(angle,axis)); ret->normalize();  return ret; }
 	static QuaternionT* fromAngleAxis(const Scalar& angle, const CompatVec3& axis){ QuaternionT* ret=new QuaternionT(AngleAxisT(angle,axis)); ret->normalize(); return ret; }
 	static QuaternionT* fromTwoVectors(const CompatVec3& u, const CompatVec3& v){ QuaternionT* q(new QuaternionT); q->setFromTwoVectors(u,v); return q; }
+	static QuaternionT* fromRPY(const Scalar& roll, const Scalar& pitch, const Scalar& yaw){ 
+		QuaternionT* q(new QuaternionT); 
+		*q = AngleAxisT(roll, CompatVec3::UnitX()) 
+		* AngleAxisT(pitch, CompatVec3::UnitY()) 
+		* AngleAxisT(yaw, CompatVec3::UnitZ()); 
+		return q; 
+	}
 
 	// those must be wrapped since "other" is declared as QuaternionBase<OtherDerived>; the type is then not inferred when using .def
 	static QuaternionT slerp(const QuaternionT& self, const Real& t, const QuaternionT& other){ return self.slerp(t,other); }
@@ -646,6 +655,7 @@ class QuaternionVisitor:  public py::def_visitor<QuaternionVisitor<QuaternionT> 
 	static py::tuple toAxisAngle(const QuaternionT& self){ AngleAxisT aa(self); return py::make_tuple(aa.axis(),aa.angle());}
 	static py::tuple toAngleAxis(const QuaternionT& self){ AngleAxisT aa(self); return py::make_tuple(aa.angle(),aa.axis());}
 	static CompatVec3 toRotationVector(const QuaternionT& self){ AngleAxisT aa(self); return aa.angle()*aa.axis();}
+	static CompatVec3 toRPY(const QuaternionT& self){ return self.toRotationMatrix().eulerAngles(0,1,2);}
 	static void setFromTwoVectors(QuaternionT& self, const Vector3r& u, const Vector3r& v){ self.setFromTwoVectors(u,v); /*return self;*/ }
 
 	static bool __eq__(const QuaternionT& u, const QuaternionT& v){ return u.x()==v.x() && u.y()==v.y() && u.z()==v.z() && u.w()==v.w(); }
